@@ -1,0 +1,477 @@
+{
+   "Description": "Example Infrastructure for a Go Application. This template will deploy a highly available Auto Scaling Group of EC2 instances with the CodeDeploy agent installed ready for application deployments. It will also deploy a VPC with public and private  subnets. An Application Load Balancer is placed in the public subnets, which forwards traffic to the application servers in the private subnets. NAT Gateways are deployed in each AZ to facilitate outbound traffic from the application servers to the internet.\n",
+   "Parameters": {
+      "ApplicationName": {
+         "Type": "String"
+      },
+      "EnvironmentName": {
+         "Type": "String"
+      },
+      "ArtifactS3Bucket": {
+         "Type": "String"
+      },
+      "InstanceType": {
+         "Description": "The instance type to deploy to",
+         "Type": "String",
+         "Default": "t2.micro"
+      },
+      "InstanceCount": {
+         "Description": "How many instances should the AutoScaling Group contain",
+         "Type": "Number",
+         "Default": 2
+      },
+      "DeploymentStrategy": {
+         "Description": "The CodeDeploy deployment strategy to user",
+         "Type": "String",
+         "Default": "CodeDeployDefault.OneAtATime"
+      },
+      "VpcCIDR": {
+         "Description": "Please enter the IP range (CIDR notation) for this VPC",
+         "Type": "String",
+         "Default": "10.192.0.0/16"
+      },
+      "PublicSubnet1CIDR": {
+         "Description": "Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone",
+         "Type": "String",
+         "Default": "10.192.10.0/24"
+      },
+      "PublicSubnet2CIDR": {
+         "Description": "Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone",
+         "Type": "String",
+         "Default": "10.192.11.0/24"
+      },
+      "PrivateSubnet1CIDR": {
+         "Description": "Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone",
+         "Type": "String",
+         "Default": "10.192.20.0/24"
+      },
+      "PrivateSubnet2CIDR": {
+         "Description": "Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone",
+         "Type": "String",
+         "Default": "10.192.21.0/24"
+      }
+   },
+   "Mappings": {
+      "AWSRegionToAMI": {
+         "us-east-1": {
+            "AMI": "ami-9be6f38c"
+         },
+         "us-east-2": {
+            "AMI": "ami-38cd975d"
+         },
+         "us-west-1": {
+            "AMI": "ami-1e299d7e"
+         },
+         "us-west-2": {
+            "AMI": "ami-b73d6cd7"
+         },
+         "ca-central-1": {
+            "AMI": "ami-eb20928f"
+         },
+         "eu-west-1": {
+            "AMI": "ami-c51e3eb6"
+         },
+         "eu-west-2": {
+            "AMI": "ami-bfe0eadb"
+         },
+         "eu-central-1": {
+            "AMI": "ami-211ada4e"
+         },
+         "ap-southeast-1": {
+            "AMI": "ami-4dd6782e"
+         },
+         "ap-northeast-2": {
+            "AMI": "ami-94bb6dfa"
+         },
+         "ap-northeast-1": {
+            "AMI": "ami-9f0c67f8"
+         },
+         "ap-southeast-2": {
+            "AMI": "ami-28cff44b"
+         },
+         "ap-south-1": {
+            "AMI": "ami-9fc7b0f0"
+         },
+         "sa-east-1": {
+            "AMI": "ami-bb40d8d7"
+         }
+      },
+      "CodeDeployInstallerBuckets": {
+         "us-east-1": {
+            "Bucket": "aws-codedeploy-us-east-1"
+         },
+         "us-east-2": {
+            "Bucket": "aws-codedeploy-us-east-2"
+         },
+         "us-west-1": {
+            "Bucket": "aws-codedeploy-us-west-1"
+         },
+         "us-west-2": {
+            "Bucket": "aws-codedeploy-us-west-2"
+         },
+         "ca-central-1": {
+            "Bucket": "aws-codedeploy-ca-central-1"
+         },
+         "eu-west-1": {
+            "Bucket": "aws-codedeploy-eu-west-1"
+         },
+         "eu-west-2": {
+            "Bucket": "aws-codedeploy-eu-west-2"
+         },
+         "eu-central-1": {
+            "Bucket": "aws-codedeploy-eu-central-1"
+         },
+         "ap-northeast-1": {
+            "Bucket": "aws-codedeploy-ap-northeast-1"
+         },
+         "ap-northeast-2": {
+            "Bucket": "aws-codedeploy-ap-northeast-2"
+         },
+         "ap-southeast-1": {
+            "Bucket": "aws-codedeploy-ap-southeast-1"
+         },
+         "ap-southeast-2": {
+            "Bucket": "aws-codedeploy-ap-southeast-2"
+         },
+         "ap-south-1": {
+            "Bucket": "aws-codedeploy-ap-south-1"
+         },
+         "sa-east-1": {
+            "Bucket": "aws-codedeploy-sa-east-1"
+         }
+      }
+   },
+   "Resources": {
+      "LoadBalancer": {
+         "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+         "Properties": {
+            "Name": null,
+            "Subnets": [
+               null,
+               null
+            ],
+            "SecurityGroups": [
+               null
+            ],
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "LoadBalancerListener": {
+         "Type": "AWS::ElasticLoadBalancingV2::Listener",
+         "Properties": {
+            "LoadBalancerArn": null,
+            "Port": 80,
+            "Protocol": "HTTP",
+            "DefaultActions": [
+               {
+                  "Type": "forward",
+                  "TargetGroupArn": null
+               }
+            ]
+         }
+      },
+      "TargetGroup": {
+         "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+         "Properties": {
+            "Name": null,
+            "VpcId": null,
+            "Port": 8000,
+            "Protocol": "HTTP"
+         }
+      },
+      "CodeDeployDeploymentGroup": {
+         "Type": "AWS::CodeDeploy::DeploymentGroup",
+         "Properties": {
+            "DeploymentGroupName": null,
+            "DeploymentConfigName": null,
+            "ServiceRoleArn": {
+               "Fn::ImportValue": null
+            },
+            "ApplicationName": {
+               "Fn::ImportValue": null
+            },
+            "AutoScalingGroups": [
+               null
+            ]
+         }
+      },
+      "ApplicationSecurityGroup": {
+         "Type": "AWS::EC2::SecurityGroup",
+         "Properties": {
+            "VpcId": null,
+            "GroupDescription": "Controls who can access the application servers",
+            "SecurityGroupIngress": [
+               {
+                  "SourceSecurityGroupId": null,
+                  "IpProtocol": -1
+               }
+            ],
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "LoadBalancerSecurityGroup": {
+         "Type": "AWS::EC2::SecurityGroup",
+         "Properties": {
+            "VpcId": null,
+            "GroupDescription": "Controls who can access the load balancer",
+            "SecurityGroupIngress": [
+               {
+                  "CidrIp": "0.0.0.0/0",
+                  "IpProtocol": -1
+               }
+            ],
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "InstanceRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+            "Path": "/",
+            "RoleName": null,
+            "AssumeRolePolicyDocument": "{\n    \"Statement\": [{\n        \"Action\": \"sts:AssumeRole\",\n        \"Effect\": \"Allow\",\n        \"Principal\": { \n            \"Service\": \"ec2.amazonaws.com\" \n        }\n    }]\n}\n",
+            "Policies": [
+               {
+                  "PolicyName": null,
+                  "PolicyDocument": null
+               }
+            ]
+         }
+      },
+      "InstanceProfile": {
+         "Type": "AWS::IAM::InstanceProfile",
+         "Properties": {
+            "Path": "/",
+            "Roles": [
+               null
+            ]
+         }
+      },
+      "VPC": {
+         "Type": "AWS::EC2::VPC",
+         "Properties": {
+            "CidrBlock": null,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "InternetGateway": {
+         "Type": "AWS::EC2::InternetGateway",
+         "Properties": {
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "InternetGatewayAttachment": {
+         "Type": "AWS::EC2::VPCGatewayAttachment",
+         "Properties": {
+            "InternetGatewayId": null,
+            "VpcId": null
+         }
+      },
+      "PublicSubnet1": {
+         "Type": "AWS::EC2::Subnet",
+         "Properties": {
+            "VpcId": null,
+            "AvailabilityZone": null,
+            "CidrBlock": null,
+            "MapPublicIpOnLaunch": true,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "PublicSubnet2": {
+         "Type": "AWS::EC2::Subnet",
+         "Properties": {
+            "VpcId": null,
+            "AvailabilityZone": null,
+            "CidrBlock": null,
+            "MapPublicIpOnLaunch": true,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "PrivateSubnet1": {
+         "Type": "AWS::EC2::Subnet",
+         "Properties": {
+            "VpcId": null,
+            "AvailabilityZone": null,
+            "CidrBlock": null,
+            "MapPublicIpOnLaunch": false,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "PrivateSubnet2": {
+         "Type": "AWS::EC2::Subnet",
+         "Properties": {
+            "VpcId": null,
+            "AvailabilityZone": null,
+            "CidrBlock": null,
+            "MapPublicIpOnLaunch": false,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "NatGateway1EIP": {
+         "Type": "AWS::EC2::EIP",
+         "DependsOn": "InternetGatewayAttachment",
+         "Properties": {
+            "Domain": "vpc"
+         }
+      },
+      "NatGateway2EIP": {
+         "Type": "AWS::EC2::EIP",
+         "DependsOn": "InternetGatewayAttachment",
+         "Properties": {
+            "Domain": "vpc"
+         }
+      },
+      "NatGateway1": {
+         "Type": "AWS::EC2::NatGateway",
+         "Properties": {
+            "AllocationId": null,
+            "SubnetId": null
+         }
+      },
+      "NatGateway2": {
+         "Type": "AWS::EC2::NatGateway",
+         "Properties": {
+            "AllocationId": null,
+            "SubnetId": null
+         }
+      },
+      "PublicRouteTable": {
+         "Type": "AWS::EC2::RouteTable",
+         "Properties": {
+            "VpcId": null,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "DefaultPublicRoute": {
+         "Type": "AWS::EC2::Route",
+         "Properties": {
+            "RouteTableId": null,
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": null
+         }
+      },
+      "PublicSubnet1RouteTableAssociation": {
+         "Type": "AWS::EC2::SubnetRouteTableAssociation",
+         "Properties": {
+            "RouteTableId": null,
+            "SubnetId": null
+         }
+      },
+      "PublicSubnet2RouteTableAssociation": {
+         "Type": "AWS::EC2::SubnetRouteTableAssociation",
+         "Properties": {
+            "RouteTableId": null,
+            "SubnetId": null
+         }
+      },
+      "PrivateRouteTable1": {
+         "Type": "AWS::EC2::RouteTable",
+         "Properties": {
+            "VpcId": null,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "DefaultPrivateRoute1": {
+         "Type": "AWS::EC2::Route",
+         "Properties": {
+            "RouteTableId": null,
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId": null
+         }
+      },
+      "PrivateSubnet1RouteTableAssociation": {
+         "Type": "AWS::EC2::SubnetRouteTableAssociation",
+         "Properties": {
+            "RouteTableId": null,
+            "SubnetId": null
+         }
+      },
+      "PrivateRouteTable2": {
+         "Type": "AWS::EC2::RouteTable",
+         "Properties": {
+            "VpcId": null,
+            "Tags": [
+               {
+                  "Key": "Name",
+                  "Value": null
+               }
+            ]
+         }
+      },
+      "DefaultPrivateRoute2": {
+         "Type": "AWS::EC2::Route",
+         "Properties": {
+            "RouteTableId": null,
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId": null
+         }
+      },
+      "PrivateSubnet2RouteTableAssociation": {
+         "Type": "AWS::EC2::SubnetRouteTableAssociation",
+         "Properties": {
+            "RouteTableId": null,
+            "SubnetId": null
+         }
+      }
+   },
+   "Outputs": {
+      "WebsiteURL": {
+         "Description": "Webserver URL",
+         "Value": null
+      }
+   }
+}
